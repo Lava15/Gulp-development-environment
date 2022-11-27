@@ -10,62 +10,70 @@ import minifycss from "gulp-minify-css";
 import babel from "gulp-babel";
 import uglify from "gulp-uglify";
 import rename from "gulp-rename";
+import autoprefixer from "gulp-autoprefixer";
+import size from "gulp-size";
 
 const sass = gulpSass(dartSass);
 
 const pathSrc = "src/";
 const pathBuild = "build/";
 
-export const cleanDist = () => {
-  return del(["build"]);
+export const cleanBuild = () => {
+  return del(["build/*", "!build/images"]);
 };
 
 const config = {
   pathSrc: {
-    // html: pathSrc + "pug/**/*.pug",
+    html: pathSrc + "pug/**/*.pug",
     style: pathSrc + "styles/**/*.scss",
     js: pathSrc + "js/**/*.*",
-    // fonts: pathSrc + "fonts/**/*.*",
-    // img: pathSrc + "img/**/*.*",
+    fonts: pathSrc + "fonts/**/*.*",
+    images: pathSrc + "images/**/*.*",
   },
   pathDest: {
-    // html: pathBuild,
+    html: pathBuild,
     style: pathBuild + "styles/",
     js: pathBuild + "js/",
-    // fonts: pathBuild + "fonts/",
-    // img: pathBuild + "img/",
+    fonts: pathBuild + "fonts/",
+    images: pathBuild + "images/",
   },
   watch: {
-    // html: pathSrc + "pug/**/*.pug",
+    html: pathSrc + "pug/**/*.pug",
     style: pathSrc + "scss/**/*.scss",
     js: pathSrc + "js/**/*.*",
-    // fonts: pathSrc + "fonts/**/*.*",
-    // img: pathSrc + "img/**/*.*",
+    fonts: pathSrc + "fonts/**/*.*",
+    images: pathSrc + "images/**/*.*",
   },
 };
 
 const watchFiles = () => {
-  // gulp.watch(config.watch.html, gulp.series(pugTask));
+  gulp.watch(config.watch.html, gulp.series(pugTask));
   gulp.watch(config.watch.style, gulp.series(scssTask));
   gulp.watch(config.watch.js, gulp.series(jsTask));
-  // gulp.watch(config.watch.img, gulp.series(imgTask));
-  // gulp.watch(config.watch.fonts, gulp.series(fontsTask));
+  gulp.watch(config.watch.images, gulp.series(imgTask));
+  gulp.watch(config.watch.fonts, gulp.series(fontsTask));
 };
 
-// export const pugTask = () => {
-//   return gulp
-//     .src(config.pathSrc.html)
-//     .pipe(plumber())
-//     .pipe(pug())
-//     .pipe(gulp.dest(config.pathDest.html))
-//     .pipe(browsersync.stream());
-// };
+export const pugTask = () => {
+  return gulp
+    .src(config.pathSrc.html)
+    .pipe(plumber())
+    .pipe(pug())
+    .pipe(gulp.dest(config.pathDest.html))
+    .pipe(size())
+    .pipe(browsersync.stream());
+};
 
 export const scssTask = () => {
   return gulp
     .src(config.pathSrc.style)
     .pipe(plumber())
     .pipe(sass())
+    .pipe(
+      autoprefixer({
+        cascade: false,
+      })
+    )
     .pipe(minifycss())
     .pipe(
       rename({
@@ -73,8 +81,9 @@ export const scssTask = () => {
         suffix: ".min",
       })
     )
-    .pipe(gulp.dest(config.pathDest.style));
-  // .pipe(browsersync.stream());
+    .pipe(size())
+    .pipe(gulp.dest(config.pathDest.style))
+    .pipe(browsersync.stream());
 };
 
 export const jsTask = () => {
@@ -89,28 +98,28 @@ export const jsTask = () => {
         suffix: ".min",
       })
     )
-    .pipe(gulp.dest(config.pathDest.js));
-
-  // .pipe(browsersync.stream());
+    .pipe(size())
+    .pipe(gulp.dest(config.pathDest.js))
+    .pipe(browsersync.stream());
 };
-// /{ presets: ["es2015"] }
+export const imgTask = () => {
+  return gulp
+    .src(config.pathSrc.images)
+    .pipe(plumber())
+    .pipe(imagemin())
+    .pipe(gulp.dest(config.pathDest.images))
+    .pipe(browsersync.stream());
+};
 
-// export const imgTask = () => {
-//   return gulp
-//     .src(config.pathSrc.img)
-//     .pipe(plumber())
-//     .pipe(imagemin())
-//     .pipe(gulp.dest(config.pathDest.img))
-//     .pipe(browsersync.stream());
-// };
+const fontsTask = () => {
+  return gulp
+    .src(config.pathSrc.fonts)
+    .pipe(plumber())
+    .pipe(gulp.dest(config.pathDest.fonts))
+    .pipe(size())
 
-// const fontsTask = () => {
-//   return gulp
-//     .src(config.pathSrc.fonts)
-//     .pipe(plumber())
-//     .pipe(gulp.dest(config.pathDest.fonts))
-//     .pipe(browsersync.stream());
-// };
+    .pipe(browsersync.stream());
+};
 
 export const browserSync = () => {
   browsersync.init({
@@ -121,12 +130,12 @@ export const browserSync = () => {
 };
 
 export const build = gulp.series(
-  cleanDist,
-  // pugTask,
+  cleanBuild,
+  pugTask,
   scssTask,
-  jsTask
-  // fontsTask,
-  // imgTask
+  jsTask,
+  fontsTask,
+  imgTask
 );
 export const dev = gulp.series(build, gulp.parallel(watchFiles, browserSync));
 export default gulp.series(dev);
